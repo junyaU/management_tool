@@ -15,25 +15,25 @@ class LoginManaba:
   load_dotenv()
   def __init__(self):
     self.env = os.environ
+    self.op = Options()
+    self.op.add_argument("--disable-gpu")
+    self.op.add_argument("--disable-extensions")
+    self.op.add_argument("--proxy-server='direct://'")
+    self.op.add_argument("--proxy-bypass-list=*")
+    self.op.add_argument("--start-maximized")
+    self.op.add_argument("--headless")
+    self.base_url = os.environ['BASE_URL']
+    self.driver = webdriver.Chrome(chrome_options=self.op)
+    self.driver.get("http://www.ritsumei.ac.jp/ct/")
 
   def login(self):
-    op = Options()
-    op.add_argument("--disable-gpu")
-    op.add_argument("--disable-extensions")
-    op.add_argument("--proxy-server='direct://'")
-    op.add_argument("--proxy-bypass-list=*")
-    op.add_argument("--start-maximized")
-    op.add_argument("--headless")
-    URL = "http://www.ritsumei.ac.jp/ct/"
-
-    driver = webdriver.Chrome(chrome_options=op)
-    driver.get(URL)
+    driver = self.driver
 
     driver.find_element_by_id('btnLogin').click()
     time.sleep(3)
 
     #立命館のmanabaはタブが謎に遷移するのでそれに対応
-    driver.switch_to.window(driver.window_handles[-1])
+    driver.switch_to.window(self.driver.window_handles[-1])
     time.sleep(1)
 
     #値入力
@@ -44,11 +44,29 @@ class LoginManaba:
     time.sleep(3)
 
     driver.find_element_by_class_name("mynavi-button-course").click()
+  def getReportData(self):
+    self.login()
+    driver = self.driver
+    class_urls = []
+    class_datas = driver.find_elements_by_class_name('course-cell')
+    #配列にURL格納
+    for data in class_datas:
+      data_url = data.find_element_by_tag_name('a').get_attribute('href') + '_report'
+      class_urls.append(data_url)
 
-    return driver.page_source.encode('utf-8')
+    for class_url in class_urls:
+      driver.get(class_url)
+      soup = BeautifulSoup(driver.page_source.encode('utf-8'), 'html.parser')
 
-  def aaa(self):
-    login_page = self.login()
+      report_datas = soup.find_all('tr')
+      for report_data in report_datas:
+        if report_data:
+          #まだ課題の受付をしていて且つ、未提出であるか
+          within_the_deadline = report_data.find('span', class_='deadline')
+          if within_the_deadline:
+            suject_name = soup.select_one('#coursename')
+            report_name = report_data.find('a')
+            submission_deadline = report_data.find_all('td')[3]
+            print(suject_name.text, ':',report_name.text,':',submission_deadline.text+'まで')
 
-    soup = BeautifulSoup(login_page, features="html.parser")
-    class_datas = soup.select('.course-cell')
+LoginManaba().getReportData()
