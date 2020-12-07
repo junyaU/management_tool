@@ -49,6 +49,8 @@ class LoginManaba:
     driver = self.driver
     class_urls = []
     class_datas = driver.find_elements_by_class_name('course-cell')
+    print("レポートのデータ")
+
     #配列にURL格納
     for data in class_datas:
       data_url = data.find_element_by_tag_name('a').get_attribute('href') + '_report'
@@ -64,9 +66,37 @@ class LoginManaba:
           #まだ課題の受付をしていて且つ、未提出であるか
           within_the_deadline = report_data.find('span', class_='deadline')
           if within_the_deadline:
-            suject_name = soup.select_one('#coursename')
-            report_name = report_data.find('a')
-            submission_deadline = report_data.find_all('td')[3]
-            print(suject_name.text, ':',report_name.text,':',submission_deadline.text+'まで')
+            suject_name = soup.select_one('#coursename').text
+            report_name = report_data.find('a').text
+            submission_deadline = report_data.find_all('td')[3].text
+            print(suject_name, ':',report_name,':',submission_deadline+'まで')
+
+  def getLittleTestData(self):
+    self.login()
+    driver = self.driver
+    test_urls = []
+    test_datas = driver.find_elements_by_class_name('course-cell')
+    print("小テストのデータ")
+
+    #配列にURL格納
+    for data in test_datas:
+      data_url = data.find_element_by_tag_name('a').get_attribute('href') + '_query'
+      test_urls.append(data_url)
+
+    for test_url in test_urls:
+      driver.get(test_url)
+      soup = BeautifulSoup(driver.page_source.encode('utf-8'), 'html.parser')
+
+      soup_datas = soup.find_all('tr')
+      for data in soup_datas:
+        if data:
+          #まだ課題の受付をしていて且つ、未提出であるか
+          within_the_deadline = data.find('span', class_='deadline')
+          if within_the_deadline:
+            subject_name = soup.select_one('#coursename').text
+            test_name = data.find('h3').find('a').text
+            submission_deadline = data.find_all('td')[3].text
+            print(subject_name,':',test_name,':',submission_deadline,'まで')
 
 LoginManaba().getReportData()
+LoginManaba().getLittleTestData()
